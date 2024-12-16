@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Alina_Liana_Miron_Lab2.Pages.Books
 {
-    public class CreateModel : PageModel
+    public class CreateModel : BookCategoriesPageModel
     {
         private readonly Alina_Liana_Miron_Lab2.Data.Alina_Liana_Miron_Lab2Context _context;
 
@@ -22,8 +22,17 @@ namespace Alina_Liana_Miron_Lab2.Pages.Books
 
         public IActionResult OnGet()
         {
-            ViewData["PublisherID"] = new SelectList(_context.Set<Publisher>(), "ID",
-"PublisherName");
+            var authorList = _context.Author.Select(x => new
+            {
+                x.Id,
+                FullName = x.LastName + " " + x.FirstName
+            }); 
+
+            ViewData["PublisherID"] = new SelectList(_context.Set<Publisher>(), "ID","PublisherName");
+            ViewData["AuthorID"] = new SelectList(authorList, "ID", "FullName");
+            var book = new Book();
+            book.BookCategories = new List<BookCategory>();
+            PopulateAssignedCategoryData(_context, book);
             return Page();
         }
 
@@ -32,16 +41,28 @@ namespace Alina_Liana_Miron_Lab2.Pages.Books
         
 
         // To protect from overposting attacks, see https://aka.ms/RazorPagesCRUD
-        public async Task<IActionResult> OnPostAsync()
-        {
-          if (!ModelState.IsValid || _context.Book == null || Book == null)
+            public async Task<IActionResult> OnPostAsync(string[] selectedCategories)
+            {
+                var newBook = new Book();
+                if (selectedCategories != null)
+                {
+                    newBook.BookCategories = new List<BookCategory>();
+                    foreach (var cat in selectedCategories)
+                    {
+                        var catToAdd = new BookCategory
+                        {
+                            CategoryID = int.Parse(cat)
+                        };
+                        newBook.BookCategories.Add(catToAdd);
+                    }
+                }
+                if (!ModelState.IsValid || _context.Book == null || Book == null)
             {
                 return Page();
             }
-
+            Book.BookCategories = newBook.BookCategories;
             _context.Book.Add(Book);
             await _context.SaveChangesAsync();
-
             return RedirectToPage("./Index");
         }
     }
